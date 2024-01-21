@@ -12,15 +12,19 @@ class TestStrategy(bt.Strategy):
     def __init__(self):
         # Keep a reference to the "close" line in the data[0] dataseries
         self.dataclose = self.datas[0].close
+        self.holding = 0
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
             return
         if order.status in [order.Completed]:
             if order.isbuy():
+                self.holding += order.size
+
                 self.log(f'BUY  : 주가 {order.executed.price:,.0f}, '
                     f'수량 {order.executed.size:,.0f}, '
-                    f'수수료 {order.executed.comm:,.0f}, '        
+                    f'수수료 {order.executed.comm:,.0f}, '
+                    f'보유수 {self.holding:,.0f}, '
                     f'자산 {cerebro.broker.getvalue():,.0f}')
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
@@ -39,6 +43,9 @@ class TestStrategy(bt.Strategy):
         # self.order = None
     
     def next(self):
+
+        print(self)
+
         # Simply log the closing price of the series from the reference
         # self.log('Close, %.2f' % self.dataclose[0])
 
@@ -55,7 +62,7 @@ class TestStrategy(bt.Strategy):
 
 if __name__ == '__main__':
 
-    stock = yf.download("TQQQ", start="2021-01-01", end="2023-12-31")
+    stock = yf.download("TQQQ", start="2023-09-01", end="2023-12-31")
 
     cerebro = bt.Cerebro()
 
@@ -73,4 +80,4 @@ if __name__ == '__main__':
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    # cerebro.plot(style='candle', barup='red', bardown='blue')
+    cerebro.plot(style='candle', barup='red', bardown='blue')
