@@ -10,8 +10,12 @@ class TestStrategy(bt.Strategy):
         print('%s, %s' % (dt.isoformat(), txt))
 
     def __init__(self):
-        # Keep a reference to the "close" line in the data[0] dataseries
+        # 시가
+        self.dataopen = self.datas[0].open
+        # 종가
         self.dataclose = self.datas[0].close
+        # 저가
+        self.datalow = self.datas[0].low
         self.holding = 0
 
     def notify_order(self, order):
@@ -44,7 +48,17 @@ class TestStrategy(bt.Strategy):
     
     def next(self):
 
-        print(self)
+        self.log('open, %.2f' % self.dataclose[0])
+        self.log('close, %.2f' % self.dataopen[0])
+        
+        # 양봉 or 음봉
+        change = self.dataclose[0] - self.dataopen[0]
+        isUp = False if change > 0 else True
+
+        # 저가부터 상승률
+        per = ((self.dataclose[0] - self.datalow[0]) / self.dataclose[0]) * 100
+        self.log('per, %.02f' % per)
+        
 
         # Simply log the closing price of the series from the reference
         # self.log('Close, %.2f' % self.dataclose[0])
@@ -80,4 +94,4 @@ if __name__ == '__main__':
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    cerebro.plot(style='candle', barup='red', bardown='blue')
+    # cerebro.plot(style='candle', barup='red', bardown='blue')
