@@ -48,28 +48,42 @@ class TestStrategy(bt.Strategy):
     
     def next(self):
 
-        self.log('open, %.2f' % self.dataclose[0])
-        self.log('close, %.2f' % self.dataopen[0])
+        self.log('open, %.2f' % self.dataopen[0])
+        self.log('close, %.2f' % self.dataclose[0])
         
         # 양봉 or 음봉
         change = self.dataclose[0] - self.dataopen[0]
-        isUp = False if change > 0 else True
+        isUp = True if change > 0 else False
+        print(str(isUp))
+
+        # 과거 음봉 다음 양봉인날 저가
+        past_low = self.datalow[0]
+
+        num = 0 # 과거 index용
+        # 음봉이면 패스, 양봉이면 음봉 만나기 전까지 루프
+        if isUp :
+            while True :
+                num -= 1
+
+                past_change = self.dataclose[num] - self.dataopen[num]
+
+                if past_change > 0 :
+                    past_low = self.datalow[num]
+                else :
+                    break
 
         # 저가부터 상승률
-        per = ((self.dataclose[0] - self.datalow[0]) / self.dataclose[0]) * 100
-        self.log('per, %.02f' % per)
+        # per = ((self.dataclose[0] - self.datalow[0]) / self.dataclose[0]) * 100
+        # self.log('per, %.02f' % per)
+
+        past_per = ((self.dataclose[0] - past_low) / self.dataclose[0]) * 100
+        self.log('per, %.02f' % past_per)
         
 
         # Simply log the closing price of the series from the reference
         # self.log('Close, %.2f' % self.dataclose[0])
 
-        if self.dataclose[0] < self.dataclose[-1]:
-            # current close less than previous close
-
-            if self.dataclose[-1] < self.dataclose[-2]:
-                # previous close less than the previous close
-
-                # BUY, BUY, BUY!!! (with all possible default parameters)
+        if isUp and past_per >= 10:
                 self.log('BUY CREATE, %.2f' % self.dataclose[0])
                 self.order = self.buy(size=5)
 
@@ -94,4 +108,4 @@ if __name__ == '__main__':
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    # cerebro.plot(style='candle', barup='red', bardown='blue')
+    cerebro.plot(style='candle', barup='red', bardown='blue')
