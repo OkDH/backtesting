@@ -17,6 +17,14 @@ class TestStrategy(bt.Strategy):
         # 저가
         self.datalow = self.datas[0].low
 
+        # 한블록 단위
+        self.one_range = 0
+
+        # 목표가
+        self.target_price = 0
+
+
+
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
             return
@@ -26,6 +34,7 @@ class TestStrategy(bt.Strategy):
                 self.log(f'BUY  : 주가 {order.executed.price:,.2f}, '
                     f'수량 {order.executed.size:,.0f}, '
                     f'수수료 {order.executed.comm:,.2f}, '
+                    f'목표가 {self.target_price:,.2f}, '
                     f'자산 {cerebro.broker.getvalue():,.2f}')
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
@@ -76,11 +85,11 @@ class TestStrategy(bt.Strategy):
                     past_per
                 ))
 
-                print(self.position)
+                self.buy(price=self.dataclose[0])
 
                 # 목표가에 매도 주문
-                target_price = self.dataclose[0] + ((self.dataclose[0] - past_low) / 4)
-                self.sell(exectype=bt.Order.Limit, price=target_price)
+                self.target_price = self.dataclose[0] + ((self.dataclose[0] - past_low) / 4)
+                self.sell(exectype=bt.Order.Limit, price=self.target_price)
         # else :
             # for order in self.broker.get_orders_open():
             #     print(order)
@@ -90,7 +99,7 @@ class TestStrategy(bt.Strategy):
 
 if __name__ == '__main__':
 
-    stock = yf.download("TQQQ", start="2023-12-01", end="2023-12-25")
+    stock = yf.download("TQQQ", start="2022-12-01", end="2023-12-25")
 
     cerebro = bt.Cerebro()
 
@@ -109,4 +118,4 @@ if __name__ == '__main__':
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    # cerebro.plot(style='candle', barup='red', bardown='blue')
+    cerebro.plot(style='candle', barup='red', bardown='blue')
