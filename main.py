@@ -16,26 +16,23 @@ class TestStrategy(bt.Strategy):
         self.dataclose = self.datas[0].close
         # 저가
         self.datalow = self.datas[0].low
-        self.holding = 0
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
             return
         if order.status in [order.Completed]:
             if order.isbuy():
-                self.holding += order.size
 
-                self.log(f'BUY  : 주가 {order.executed.price:,.0f}, '
+                self.log(f'BUY  : 주가 {order.executed.price:,.2f}, '
                     f'수량 {order.executed.size:,.0f}, '
-                    f'수수료 {order.executed.comm:,.0f}, '
-                    f'보유수 {self.holding:,.0f}, '
-                    f'자산 {cerebro.broker.getvalue():,.0f}')
+                    f'수수료 {order.executed.comm:,.2f}, '
+                    f'자산 {cerebro.broker.getvalue():,.2f}')
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
             else:
-                self.log(f'SELL : 주가 {order.executed.price:,.0f}, '
+                self.log(f'SELL : 주가 {order.executed.price:,.2f}, '
                     f'수량 {order.executed.size:,.0f}, '
-                    f'수수료 {order.executed.comm:,.0f}, '
+                    f'수수료 {order.executed.comm:,.2f}, '
                     f'자산 {cerebro.broker.getvalue():,.0f}')
             self.bar_executed = len(self)
         elif order.status in [order.Canceled]:
@@ -45,16 +42,12 @@ class TestStrategy(bt.Strategy):
         elif order.status in [order.Rejected]:
             self.log('ORDER REJECTED')
         # self.order = None
-    
-    def next(self):
 
-        self.log('open, %.2f' % self.dataopen[0])
-        self.log('close, %.2f' % self.dataclose[0])
+    def next(self):
         
         # 양봉 or 음봉
         change = self.dataclose[0] - self.dataopen[0]
         isUp = True if change > 0 else False
-        print(str(isUp))
 
         # 과거 음봉 다음 양봉인날 저가
         past_low = self.datalow[0]
@@ -68,29 +61,36 @@ class TestStrategy(bt.Strategy):
                 past_change = self.dataclose[num] - self.dataopen[num]
 
                 if past_change > 0 :
-                    past_low = self.datalow[num]
+                    # 전날 저가가 지금 저가보다 낮을 수 있어서 낮은 저가로 계산
+                    past_low = self.datalow[num] if past_low > self.datalow[num] else past_low
                 else :
                     break
 
-        # 저가부터 상승률
-        # per = ((self.dataclose[0] - self.datalow[0]) / self.dataclose[0]) * 100
-        # self.log('per, %.02f' % per)
+        past_per = ((self.dataclose[0] - past_low) / past_low) * 100
 
-        past_per = ((self.dataclose[0] - past_low) / self.dataclose[0]) * 100
-        self.log('per, %.02f' % past_per)
+        if not self.position:
+            if isUp and past_per >= 10: # 매수
+                self.log('BUY CREATE 저가: {:.2f} 종가: {:.2f} 상승률: {:0.2f}%'.format(
+                    past_low,
+                    self.dataclose[0],
+                    past_per
+                ))
+
+                print(self.position)
+
+                # 목표가에 매도 주문
+                target_price = self.dataclose[0] + ((self.dataclose[0] - past_low) / 4)
+                self.sell(exectype=bt.Order.Limit, price=target_price)
+        # else :
+            # for order in self.broker.get_orders_open():
+            #     print(order)
+            
         
-
-        # Simply log the closing price of the series from the reference
-        # self.log('Close, %.2f' % self.dataclose[0])
-
-        if isUp and past_per >= 10:
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-                self.order = self.buy(size=5)
 
 
 if __name__ == '__main__':
 
-    stock = yf.download("TQQQ", start="2023-09-01", end="2023-12-31")
+    stock = yf.download("TQQQ", start="2023-12-01", end="2023-12-25")
 
     cerebro = bt.Cerebro()
 
@@ -99,8 +99,9 @@ if __name__ == '__main__':
     cerebro.adddata(data)
     cerebro.addstrategy(TestStrategy)
 
+    cerebro.broker = bt.brokers.BackBroker(coc=True) #cheat-on-close : 종가거래
     cerebro.broker.setcash(100000.0)
-    cerebro.broker.setcommission(0.007)
+    cerebro.broker.setcommission(0.0007)
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
@@ -108,4 +109,4 @@ if __name__ == '__main__':
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    cerebro.plot(style='candle', barup='red', bardown='blue')
+    # cerebro.plot(style='candle', barup='red', bardown='blue')
