@@ -13,6 +13,8 @@ def generate_signals(data):
     # 볼린저밴드
     data["UpperLine"] = data["MA20"] + 2 * data["Close"].rolling(20).std()
     data["LowerLine"] = data["MA20"] + 2 * data["Close"].rolling(20).std()
+    # RSI
+    data = calculate_rsi(data)
     # 양봉 or 음봉
     data["Change"] = data["Close"] - data["Open"]
     data["IsUp"] = np.where(data["Change"] > 0, True, False)
@@ -23,7 +25,7 @@ def generate_signals(data):
         if row["IsUp"] and entry_low is None:
             entry_low = row["Low"]
         if row["IsUp"] and entry_low is not None: # 양봉이면서
-            # if row["Close"] < row["UpperLine"] : # 볼린저밴드 상단 안쪽이면서
+            #if row["rsi"] > 60 : # 
                 if row["Close"] >= entry_low * 1.10:  # 종가가 저가대비 10% 이상 상승한 경우
                     data.at[index, "Signal"] = True
                     one_block_price = (row["Close"] - entry_low) / 5
@@ -38,9 +40,27 @@ def generate_signals(data):
     return data
 
 # 이동평균 계산 함수
-def calculate_moving_average(data, window=20):
-    return data.rolling(window=window).mean()
+def calculate_moving_average(df, window=20):
+    return df.rolling(window=window).mean()
 
+def calculate_rsi(df, period=14):
+
+    # 전일 대비 변동 평균
+    df['change'] = df['Close'].diff()
+
+    # 상승한 가격과 하락한 가격
+    df['up'] = df['change'].apply(lambda x: x if x > 0 else 0)
+    df['down'] = df['change'].apply(lambda x: -x if x < 0 else 0)
+
+    # 상승 평균과 하락 평균
+    df['avg_up'] = df['up'].ewm(alpha=1/period).mean()
+    df['avg_down'] = df['down'].ewm(alpha=1/period).mean()
+
+    # 상대강도지수(RSI) 계산
+    df['rs'] = df['avg_up'] / df['avg_down']
+    df['rsi'] = 100 - (100 / (1 + df['rs']))
+
+    return df
 
 # 백테스팅 함수
 def backtest(data) :
@@ -173,19 +193,19 @@ def addBuy(position, additional_buy_price):
 # 차트 그리기 함수
 def plot_trades_candlestick(data):
     # 색상 지정
-    # marketcolors = mpf.make_marketcolors(up='red', down='blue')
+    marketcolors = mpf.make_marketcolors(up='red', down='blue')
 
     # 스타일 만들기
-    # style = mpf.make_mpf_style(marketcolors=marketcolors)
+    style = mpf.make_mpf_style(marketcolors=marketcolors)
     
     apds = [ 
-         mpf.make_addplot(data["BuyPrice"],type='scatter',marker='^', markersize=100),
-         mpf.make_addplot(data["SellPrice"],type='scatter',marker='v', markersize=100),
+         mpf.make_addplot(data["BuyPrice"], type='scatter', marker='^', markersize=80),
+         mpf.make_addplot(data["SellPrice"], type='scatter', marker='v', markersize=80),
          mpf.make_addplot(data["UpperLine"]),
        ]
 
     # Plot the candlestick chart
-    mpf.plot(data, type='candle', addplot=apds, mav=(20))
+    mpf.plot(data, type='candle', style=style, addplot=apds, mav=(200))
 
     # plt.plot(data['Cash'], color='blue', label='Cash')
     # plt.legend()
@@ -201,7 +221,7 @@ def print_result(result):
 
 if __name__ == '__main__':
     # 주가 데이터 조회
-    stock = yf.download("TQQQ", start="2023-01-01", end="2023-12-31")
+    stock = yf.download("TQQQ", start="2020-01-01", end="2023-12-31")
 
     # 보조 지표 세팅
     data = generate_signals(stock)
