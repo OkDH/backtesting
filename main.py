@@ -84,29 +84,8 @@ def backtest(data) :
     position = None
     
     for index, row in data.iterrows():
-
-        if row["Signal"] and position is None and cash > 0:  # 진입 신호가 발생하고 현금이 있는 경우
-
-            # 한번에 매수 가능한 현금
-            # available_buy_cash = cash if cash < initial_capital else initial_capital # 원금안에서만 매수
-            available_buy_cash = cash # 수익금 재투자
-
-            # 매수 가능한 주식 수 계산
-            shares = available_buy_cash // row["Close"]  
-            position = {
-                "EntryDate": index, 
-                "EntryPrice": row["Close"], 
-                "Shares": shares,
-                "TotalBuyPrice": row["Close"] * shares,
-                "AvailableBuyCash" : available_buy_cash,
-                "OneBlockPrice": row["OneBlockPrice"],
-                "StopLoss": row["StopLoss"]
-            }
-            # 매수 기록 추가
-            data.at[index, "BuyPrice"] = row["Close"]
-            data.at[index, "BuyShares"] = shares
-            cash -= shares * row["Close"]  # 주식 구입으로 사용된 금액 차감
-        elif position is not None:  # 이미 포지션을 가지고 있는 경우
+        
+        if position is not None:  # 이미 포지션을 가지고 있는 경우
             # 목표가
             target_price = position["EntryPrice"] + position["OneBlockPrice"]
             # target_price = position["EntryPrice"] * 1.01
@@ -139,6 +118,28 @@ def backtest(data) :
                 data.at[index, "SellShares"] = position["Shares"]
                 data.at[index, "Profit"] = (position["StopLoss"] * position["Shares"]) - position["TotalBuyPrice"]
                 position = None  # 포지션 해제
+
+        if row["Signal"] and position is None and cash > 0:  # 진입 신호가 발생하고 현금이 있는 경우
+
+            # 한번에 매수 가능한 현금
+            available_buy_cash = cash if cash < initial_capital else initial_capital # 원금안에서만 매수
+            # available_buy_cash = cash # 수익금 재투자
+
+            # 매수 가능한 주식 수 계산
+            shares = available_buy_cash // row["Close"]  
+            position = {
+                "EntryDate": index, 
+                "EntryPrice": row["Close"], 
+                "Shares": shares,
+                "TotalBuyPrice": row["Close"] * shares,
+                "AvailableBuyCash" : available_buy_cash,
+                "OneBlockPrice": row["OneBlockPrice"],
+                "StopLoss": row["StopLoss"]
+            }
+            # 매수 기록 추가
+            data.at[index, "BuyPrice"] = row["Close"]
+            data.at[index, "BuyShares"] = shares
+            cash -= shares * row["Close"]  # 주식 구입으로 사용된 금액 차감
             
         data.at[index, "Cash"] = cash
         value = (position["Shares"] * row["Close"]) if position is not None else 0 # 보유하는 주식이 있다면 보유주식수 * 종가
@@ -211,7 +212,7 @@ def plot_trades_candlestick(data):
        ]
 
     # Plot the candlestick chart
-    mpf.plot(data, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 60, 120), volume=False, panel_ratios=(5,1,1), figscale=1)
+    mpf.plot(data, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 60, 120), volume=False, panel_ratios=(5,1,2), figscale=1.3)
 
 
 def print_result(result):
@@ -224,7 +225,7 @@ def print_result(result):
 
 if __name__ == '__main__':
     # 주가 데이터 조회
-    stock = yf.download("TQQQ", start="2020-01-01")
+    stock = yf.download("SOXL", start="2010-01-01")
 
     # 보조 지표 세팅
     data = generate_signals(stock)
@@ -239,4 +240,4 @@ if __name__ == '__main__':
     # print(data)
 
     # 차트 출력
-    # plot_trades_candlestick(data)
+    plot_trades_candlestick(data)
