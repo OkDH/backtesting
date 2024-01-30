@@ -25,16 +25,22 @@ def generate_signals(data):
         if row["IsUp"] and entry_low is None:
             entry_low = row["Low"]
         if row["IsUp"] and entry_low is not None: # 양봉이면서
-            #if row["rsi"] > 60 : # 
-                if row["Close"] >= entry_low * 1.10:  # 종가가 저가대비 10% 이상 상승한 경우
+            # if row["Rsi"] > 60: 
+            # if row["Close"] < row["UpperLine"]:
+                if row["Close"] >= entry_low * 1.05:  # 종가가 저가대비 n% 이상 상승한 경우
                     data.at[index, "Signal"] = True
-                    one_block_price = (row["Close"] - entry_low) / 5
+                    one_block_price = (row["Close"] - entry_low) / 10 # n분할
                     data.at[index, "OneBlockPrice"] = one_block_price
-                    data.at[index, "AdditionalBuy1"] = row["Close"] - (one_block_price * 1)
-                    data.at[index, "AdditionalBuy2"] = row["Close"] - (one_block_price * 2)
-                    data.at[index, "AdditionalBuy3"] = row["Close"] - (one_block_price * 3)
-                    data.at[index, "AdditionalBuy4"] = row["Close"] - (one_block_price * 4)
-                    data.at[index, "StopLoss"] = data.at[index, "AdditionalBuy4"] * 0.98
+                    # data.at[index, "AdditionalBuy1"] = row["Close"] - (one_block_price * 1)
+                    # data.at[index, "AdditionalBuy2"] = row["Close"] - (one_block_price * 2)
+                    # data.at[index, "AdditionalBuy3"] = row["Close"] - (one_block_price * 3)
+                    # data.at[index, "AdditionalBuy4"] = row["Close"] - (one_block_price * 4)
+                    # data.at[index, "StopLoss"] = data.at[index, "AdditionalBuy4"] * 0.98
+                    data.at[index, "AdditionalBuy1"] = 0
+                    data.at[index, "AdditionalBuy2"] = 0
+                    data.at[index, "AdditionalBuy3"] = 0
+                    data.at[index, "AdditionalBuy4"] = 0
+                    data.at[index, "StopLoss"] = (row["Close"] - (one_block_price * 1))
         elif not row["IsUp"]:
             entry_low = None
     return data
@@ -58,7 +64,7 @@ def calculate_rsi(df, period=14):
 
     # 상대강도지수(RSI) 계산
     df['rs'] = df['avg_up'] / df['avg_down']
-    df['rsi'] = 100 - (100 / (1 + df['rs']))
+    df['Rsi'] = 100 - (100 / (1 + df['rs']))
 
     return df
 
@@ -81,8 +87,13 @@ def backtest(data) :
 
         if row["Signal"] and position is None and cash > 0:  # 진입 신호가 발생하고 현금이 있는 경우
 
-            available_buy_cash = cash / 5 # 한번에 매수 가능한 현금
-            shares = available_buy_cash // row["Close"]  # 매수 가능한 주식 수 계산
+            # 한번에 매수 가능한 현금
+            # available_buy_cash = cash / 5
+            available_buy_cash = cash if cash < initial_capital else initial_capital
+            # available_buy_cash = cash
+
+            # 매수 가능한 주식 수 계산
+            shares = available_buy_cash // row["Close"]  
             position = {
                 "EntryDate": index, 
                 "EntryPrice": row["Close"], 
@@ -105,7 +116,19 @@ def backtest(data) :
             data.at[index, "BuyShares"] = shares
             cash -= shares * row["Close"]  # 주식 구입으로 사용된 금액 차감
         elif position is not None:  # 이미 포지션을 가지고 있는 경우
+            # 목표가
             target_price = position["EntryPrice"] + position["OneBlockPrice"]
+            # target_price = position["EntryPrice"] * 1.01
+            # 수익 실현
+            if row["Open"] >= target_price:
+                cash += position["Shares"] * row["Open"]  # 주식 판매로 얻은 금액 추가
+                data.at[index, "Cash"] = cash
+                # 매도 기록 추가
+                data.at[index, "SellPrice"] = row["Open"]
+                data.at[index, "SellShares"] = position["Shares"]
+                data.at[index, "Profit"] = (row["Open"] * position["Shares"]) - position["TotalBuyPrice"]
+                position = None  # 포지션 해제
+                continue
             if row["High"] >= target_price: # 목표 매도가에 매도
                 cash += position["Shares"] * target_price  # 주식 판매로 얻은 금액 추가
                 data.at[index, "Cash"] = cash
@@ -113,6 +136,22 @@ def backtest(data) :
                 data.at[index, "SellPrice"] = target_price
                 data.at[index, "SellShares"] = position["Shares"]
                 data.at[index, "Profit"] = (target_price * position["Shares"]) - position["TotalBuyPrice"]
+                position = None  # 포지션 해제
+                continue
+            if row["Open"] <= position["StopLoss"]: # 장초반 손절
+                cash += position["Shares"] * row["Open"]  # 주식 판매로 얻은 금액 추가
+                # 매도 기록 추가
+                data.at[index, "SellPrice"] = row["Open"]
+                data.at[index, "SellShares"] = position["Shares"]
+                data.at[index, "Profit"] = (row["Open"] * position["Shares"]) - position["TotalBuyPrice"]
+                position = None  # 포지션 해제
+                continue
+            if row["Low"] <= position["StopLoss"]: # 손절
+                cash += position["Shares"] * position["StopLoss"]  # 주식 판매로 얻은 금액 추가
+                # 매도 기록 추가
+                data.at[index, "SellPrice"] = position["StopLoss"]
+                data.at[index, "SellShares"] = position["Shares"]
+                data.at[index, "Profit"] = (position["StopLoss"] * position["Shares"]) - position["TotalBuyPrice"]
                 position = None  # 포지션 해제
                 continue
             if position["IsAdditionalBuy1"] is False and row["Low"] <= position["AdditionalBuy1"]: # 1차 매수
@@ -143,13 +182,6 @@ def backtest(data) :
                 data.at[index, "BuyPrice"] = position["AdditionalBuy4"]
                 data.at[index, "BuyShares"] = position["AvailableBuyCash"] // position["AdditionalBuy4"]
                 cash -= buy_price # 주식 구입으로 사용된 금액 차감
-            if row["Low"] <= position["StopLoss"]: # 손절
-                cash += position["Shares"] * position["StopLoss"]  # 주식 판매로 얻은 금액 추가
-                # 매도 기록 추가
-                data.at[index, "SellPrice"] = position["StopLoss"]
-                data.at[index, "SellShares"] = position["Shares"]
-                data.at[index, "Profit"] = (position["StopLoss"] * position["Shares"]) - position["TotalBuyPrice"]
-                position = None  # 포지션 해제
             
         data.at[index, "Cash"] = cash
 
@@ -171,8 +203,8 @@ def backtest(data) :
     result["Return"] = {"label":"실현손익금", "value":cash - initial_capital}
     result["ReturnRatio"] = {"label":"누적수익률(%)", "value":(result["Return"]["value"] / initial_capital) * 100}
     result["TotalProfit"] = {"label":"실현 수익금의 합", "value":data[data["Profit"] > 0]["Profit"].sum()}
-    result["TotalLoss"] = {"label":"실현 손익금의 합", "value":data[data["Profit"] < 0]["Profit"].sum()}
-    result["ProfitLossRatio"] = {"label":"손익비", "value":result["TotalProfit"]["value"] / result["TotalLoss"]["value"]}
+    result["TotalLoss"] = {"label":"실현 손실금의 합", "value":data[data["Profit"] < 0]["Profit"].sum()}
+    result["ProfitLossRatio"] = {"label":"손익비", "value":result["TotalProfit"]["value"] / abs(result["TotalLoss"]["value"])}
     result["WinCount"] = {"label":"실현 수익 횟수", "value":len(data[data["Profit"] > 0])}
     result["LoseCount"] = {"label":"실현 손익 횟수", "value":len(data[data["Profit"] <= 0])}
     result["WinRate"] = {"label":"매매 성공률(%)", "value":result["WinCount"]["value"] / (result["WinCount"]["value"] + result["LoseCount"]["value"]) * 100}
@@ -192,24 +224,24 @@ def addBuy(position, additional_buy_price):
 
 # 차트 그리기 함수
 def plot_trades_candlestick(data):
-    # 색상 지정
-    marketcolors = mpf.make_marketcolors(up='red', down='blue')
-
-    # 스타일 만들기
-    style = mpf.make_mpf_style(marketcolors=marketcolors)
     
     apds = [ 
-         mpf.make_addplot(data["BuyPrice"], type='scatter', marker='^', markersize=80),
-         mpf.make_addplot(data["SellPrice"], type='scatter', marker='v', markersize=80),
-         mpf.make_addplot(data["UpperLine"]),
+        # 매수, 매도 포인트
+        mpf.make_addplot(data["BuyPrice"], type='scatter'),
+        mpf.make_addplot(data["SellPrice"], type='scatter'),
+        # win / lose 그리기
+        mpf.make_addplot(data["Profit"].apply(lambda x: x if pd.notnull(x) and x >= 0 else np.nan), type='scatter', color="red", panel=1),
+        mpf.make_addplot(data["Profit"].apply(lambda x: x if pd.notnull(x) and x < 0 else np.nan), type='scatter', color="blue", panel=1),
+        # 볼린저밴드
+        # mpf.make_addplot(data["UpperLine"]), 
+        # mpf.make_addplot(data["LowerLine"]),
+        # RSI
+        mpf.make_addplot(data["Rsi"], type="line", ylabel='RSI', panel=2)
        ]
 
     # Plot the candlestick chart
-    mpf.plot(data, type='candle', style=style, addplot=apds, mav=(200))
+    mpf.plot(data, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 60, 120), volume=False, panel_ratios=(5,1,1), figscale=1)
 
-    # plt.plot(data['Cash'], color='blue', label='Cash')
-    # plt.legend()
-    # plt.show()
 
 def print_result(result):
     print("백테스팅 결과:")
@@ -221,7 +253,7 @@ def print_result(result):
 
 if __name__ == '__main__':
     # 주가 데이터 조회
-    stock = yf.download("TQQQ", start="2020-01-01", end="2023-12-31")
+    stock = yf.download("SOXL", start="2023-01-01")
 
     # 보조 지표 세팅
     data = generate_signals(stock)
@@ -233,6 +265,7 @@ if __name__ == '__main__':
     print_result(result)
     
     # print(data[data["Profit"].notna()])
+    # print(data)
 
     # 차트 출력
     plot_trades_candlestick(data)
