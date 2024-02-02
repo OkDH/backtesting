@@ -1,15 +1,20 @@
 import yfinance as yf
 import strategy.short_term_leverage as strategy_stl
+import pandas as pd
 
 # 미국 레버리지 ETF 단타
 def short_term_leverage():
     # 주가 데이터 조회
     stock = yf.download("SOXL", start="2010-01-01")
 
-    stl = strategy_stl.ShortTermLeverage(stock, initial_capital=1000, standard_rsi=40, target_division=10, standard_rate=1.065, is_reinvest=True)
+    stl = strategy_stl.ShortTermLeverage(stock, initial_capital=1000, commission=0.007, standard_rsi=0, target_division=1, standard_rate=1.07, is_reinvest=False)
 
     # 백테스팅
-    stl.backtest()
+    data = stl.backtest()
+    d = data[["BuyPrice","BuyShares","BuyCommission","TargetPrice", "SellPrice","SellShares","SellCommission","Profit", "Value"]]
+
+    pd.set_option("display.max_rows", 500)
+    print(d)
 
     # 결과 출력
     result = stl.get_result()

@@ -15,9 +15,10 @@ import dao.backtest_result as br
 '''
 class ShortTermLeverage:
 
-    def __init__(self, stock, initial_capital = 10000, standard_rsi = 0, target_division = 5, standard_rate = 1.1, is_reinvest = True):
+    def __init__(self, stock, initial_capital = 10000, commission=0.007, standard_rsi = 0, target_division = 5, standard_rate = 1.1, is_reinvest = True):
         self.stock = stock
         self.initial_capital = initial_capital # 초기자본
+        self.commission = commission # 수수료
         self.standard_rsi = standard_rsi # 진입 기준 rsi (standard_rsi 높을 때 진입)
         self.target_division = target_division # 목표가 될 분할 수(분할 수가 높을 수록 목표 가격이 낮음)
         self.standard_rate = standard_rate # 진입 기준 저가대비 상승률 ex) 1.1 = 양본전환 후 저가 대비 10%이상 종가 마무리되면 진입
@@ -52,6 +53,8 @@ class ShortTermLeverage:
                         stock.at[index, "Signal"] = True
                         one_block_price = (row["Close"] - entry_low) / self.target_division # n분할
                         stock.at[index, "OneBlockPrice"] = one_block_price
+                        # stock.at[index, "TargetPrice"] = row["Close"] * 1.03
+                        stock.at[index, "TargetPrice"] = (row["Close"] + (one_block_price * 1))
                         stock.at[index, "StopLoss"] = (row["Close"] - (one_block_price * 1))
             elif not row["IsUp"]:
                 entry_low = None
@@ -77,36 +80,50 @@ class ShortTermLeverage:
             
             if position is not None:  # 이미 포지션을 가지고 있는 경우
                 # 목표가
-                target_price = position["EntryPrice"] + position["OneBlockPrice"]
-                # target_price = position["EntryPrice"] * 1.01
+                target_price = position["TargetPrice"]
                 # 수익 실현
                 if row["Open"] >= target_price:
-                    cash += position["Shares"] * row["Open"]  # 주식 판매로 얻은 금액 추가
+                    amount = row["Open"] * position["Shares"]
+                    sell_commission = amount * self.commission
+                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
                     # 매도 기록 추가
                     stock.at[index, "SellPrice"] = row["Open"]
                     stock.at[index, "SellShares"] = position["Shares"]
-                    stock.at[index, "Profit"] = (row["Open"] * position["Shares"]) - position["TotalBuyPrice"]
+                    stock.at[index, "SellCommission"] = sell_commission
+                    stock.at[index, "Profit"] = amount - position["TotalBuyPrice"] - position["BuyCommission"] - sell_commission
                     position = None  # 포지션 해제
                 elif row["High"] >= target_price: # 목표 매도가에 매도
-                    cash += position["Shares"] * target_price  # 주식 판매로 얻은 금액 추가
+                    amount = target_price * position["Shares"]
+                    sell_commission = amount * self.commission
+                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
                     # 매도 기록 추가
                     stock.at[index, "SellPrice"] = target_price
                     stock.at[index, "SellShares"] = position["Shares"]
-                    stock.at[index, "Profit"] = (target_price * position["Shares"]) - position["TotalBuyPrice"]
+                    amount = target_price * position["Shares"]
+                    stock.at[index, "SellCommission"] = amount * self.commission
+                    stock.at[index, "Profit"] = amount - position["TotalBuyPrice"] - position["BuyCommission"] - sell_commission
                     position = None  # 포지션 해제
                 elif row["Open"] <= position["StopLoss"]: # 장초반 손절
-                    cash += position["Shares"] * row["Open"]  # 주식 판매로 얻은 금액 추가
+                    amount = row["Open"] * position["Shares"]
+                    sell_commission = amount * self.commission
+                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
                     # 매도 기록 추가
                     stock.at[index, "SellPrice"] = row["Open"]
                     stock.at[index, "SellShares"] = position["Shares"]
-                    stock.at[index, "Profit"] = (row["Open"] * position["Shares"]) - position["TotalBuyPrice"]
+                    amount = row["Open"] * position["Shares"]
+                    stock.at[index, "SellCommission"] = amount * self.commission
+                    stock.at[index, "Profit"] = amount - position["TotalBuyPrice"] - position["BuyCommission"] - sell_commission
                     position = None  # 포지션 해제
                 elif row["Low"] <= position["StopLoss"]: # 손절
-                    cash += position["Shares"] * position["StopLoss"]  # 주식 판매로 얻은 금액 추가
+                    amount = position["StopLoss"] * position["Shares"]
+                    sell_commission = amount * self.commission
+                    cash += amount + sell_commission  # 주식 판매로 얻은 금액 추가
                     # 매도 기록 추가
                     stock.at[index, "SellPrice"] = position["StopLoss"]
                     stock.at[index, "SellShares"] = position["Shares"]
-                    stock.at[index, "Profit"] = (position["StopLoss"] * position["Shares"]) - position["TotalBuyPrice"]
+                    amount = position["StopLoss"] * position["Shares"]
+                    stock.at[index, "SellCommission"] = amount * self.commission
+                    stock.at[index, "Profit"] = amount - position["TotalBuyPrice"] - position["BuyCommission"] - sell_commission
                     position = None  # 포지션 해제
 
             if row["Signal"] and position is None and cash > 0:  # 진입 신호가 발생하고 현금이 있는 경우
@@ -119,11 +136,15 @@ class ShortTermLeverage:
 
                 # 매수 가능한 주식 수 계산
                 shares = available_buy_cash // row["Close"]  
+                amount = row["Close"] * shares
+                buy_commission = amount * self.commission
                 position = {
                     "EntryDate": index, 
-                    "EntryPrice": row["Close"], 
+                    "EntryPrice": row["Close"],
                     "Shares": shares,
-                    "TotalBuyPrice": row["Close"] * shares,
+                    "TargetPrice" : row["TargetPrice"],
+                    "TotalBuyPrice": amount,
+                    "BuyCommission": buy_commission,
                     "AvailableBuyCash" : available_buy_cash,
                     "OneBlockPrice": row["OneBlockPrice"],
                     "StopLoss": row["StopLoss"]
@@ -131,7 +152,8 @@ class ShortTermLeverage:
                 # 매수 기록 추가
                 stock.at[index, "BuyPrice"] = row["Close"]
                 stock.at[index, "BuyShares"] = shares
-                cash -= shares * row["Close"]  # 주식 구입으로 사용된 금액 차감
+                stock.at[index, "BuyCommission"] = position["BuyCommission"]
+                cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
                 
             stock.at[index, "Cash"] = cash
             value = (position["Shares"] * row["Close"]) if position is not None else 0 # 보유하는 주식이 있다면 보유주식수 * 종가
