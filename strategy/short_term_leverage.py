@@ -58,7 +58,6 @@ class ShortTermLeverage:
                         stock.at[index, "StopLoss"] = (row["Close"] - (one_block_price * 1))
             elif not row["IsUp"]:
                 entry_low = None
-        return stock
     
     # 백테스팅 시작
     def backtest(self):
