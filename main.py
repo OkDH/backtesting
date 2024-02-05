@@ -26,12 +26,17 @@ def short_term_leverage():
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("TQQQ", start="2010-01-01")
+    stock = yf.download("TQQQ", start="2023-01-01")
 
     ib = strategy_ib.InfiniteBuy(stock, initial_capital=10000, commission=0, standard_rsi=60, is_reinvest=False)
 
     # 백테스팅
     data = ib.backtest()
+
+    d = data[["BuyPrice","BuyShares","BuyCommission", "SellPrice","SellShares","SellCommission", "Value", "Cash"]]
+
+    pd.set_option("display.max_rows", 600)
+    print(d)
 
 
 if __name__ == '__main__':
