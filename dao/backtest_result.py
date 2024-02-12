@@ -2,7 +2,7 @@ import yfinance as yf
 
 class BacktestResult:
 
-    def __init__(self, start=None, end=None, duration=None, initial_capital=None, cash=None,
+    def __init__(self, start=None, end=None, duration=None, initial_capital=None, cash=None, balance_status=None,
                     max_drawdown=None, total_profit=None, total_loss=None, 
                     win_count=None, lose_count=None):
         self.start = start
@@ -10,12 +10,13 @@ class BacktestResult:
         self.duration = duration
         self.initial_capital = initial_capital
         self.cash = cash
+        self.balance_status = balance_status
         self.max_drawdown = max_drawdown
         self.total_profit = total_profit
         self.total_loss = total_loss
         self.win_count = win_count
         self.lose_count = lose_count
-        self.profit = self.cash - self.initial_capital
+        self.profit = self.balance_status - self.initial_capital
         self.profit_ratio = (self.profit / self.initial_capital) * 100
         self.profit_loss_ratio = self.total_profit / abs(self.total_loss)
         self.win_rate = self.win_count / (self.win_count + self.lose_count) * 100
@@ -35,8 +36,9 @@ class BacktestResult:
         print("--------------------")
         print(f"투자 원금: {self.initial_capital:,.2f}")
         print(f"보유 현금: {self.cash:,.2f}")
-        print(f"실현손익금: {self.profit:,.2f}")
-        print(f"누적수익률: {self.profit_ratio:.1f}%")
+        print(f"잔고 현황: {self.balance_status:,.2f}")
+        print(f"손익금: {self.profit:,.2f}")
+        print(f"수익률: {self.profit_ratio:.1f}%")
         print(f"S&P500 상승률: {self.snp:.1f}%")
         print(f"MDD: {self.max_drawdown:.1f}%")
         print("--------------------")
