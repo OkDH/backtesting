@@ -32,6 +32,9 @@ class InfiniteBuy:
         # MA 200
         stock["MA200"] = si.moving_average(stock["Close"], window=200)
 
+        # MACD
+        # stock["Macd"], stock["MacdSignal"] = si.macd(stock["Close"])
+
     def backtest(self):
 
         stock = self.stock
@@ -56,6 +59,7 @@ class InfiniteBuy:
             if position is not None:  # 이미 포지션을 가지고 있는 경우
 
                 if (self.is_ma_cut and row["Close"] < row["MA200"]): # 종가가 200일선 아래라면 전체 손절
+                # if (self.is_ma_cut and row["Macd"] < row["MacdSignal"]):
                     amount = row["Close"] * position["Shares"]
                     sell_commission = math.floor(amount * self.commission * 100) / 100
                     cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
@@ -162,7 +166,6 @@ class InfiniteBuy:
                                 "Profit": profit
                             })
                         
-                        
                         # 매수 체크
                         progress_per = position["TotalBuyPrice"] / position["AvailableBuyCash"] * 100
                         one_buy_shares = math.floor(position["OneBuyCash"] / row["Close"])
@@ -202,7 +205,7 @@ class InfiniteBuy:
                                     position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares2)
                                     position["Shares"] += buy_shares2
                                     position["TotalBuyPrice"] += amount
-                                    
+
                                     # 매수 기록 추가
                                     trade_history.append({
                                         "Type":"BUY",
@@ -240,6 +243,7 @@ class InfiniteBuy:
             elif row["Rsi"] < self.standard_rsi and position is None and cash > 0: # 신규진입
 
                 if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
+                # if (self.is_ma_cut and row["Macd"] > row["MacdSignal"]) or not self.is_ma_cut: 
 
                     # 한번에 매수 가능한 현금
                     if self.is_reinvest :
@@ -337,7 +341,10 @@ class InfiniteBuy:
             mpf.make_addplot(self.stock["ProgressPer"], ylabel='Persent', type='line', panel=1),
             # RSI
             mpf.make_addplot(self.stock["Rsi"], type="line", ylabel='RSI', panel=2),
-            mpf.make_addplot(standard_rsi_line, type="line", ylabel='RSI', panel=2),
+            mpf.make_addplot(standard_rsi_line, type="line", ylabel='RSI Line', panel=2),
+            # MACD
+            # mpf.make_addplot(self.stock["Macd"], type="line", color='darkorange', ylabel='MACD', panel=4),
+            # mpf.make_addplot(self.stock["MacdSignal"], type="line", color='purple', ylabel='Signal', panel=4),
             # 자산가치
             mpf.make_addplot(self.stock["Value"], type='line', ylabel='Value', color="red", panel=3),
             mpf.make_addplot(self.stock["Drawdown"], type='line', ylabel='MDD', panel=3),
