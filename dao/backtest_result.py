@@ -20,7 +20,7 @@ class BacktestResult:
         self.profit_ratio = (self.profit / self.initial_capital) * 100
         self.profit_loss_ratio = self.total_profit / abs(self.total_loss)
         self.win_rate = self.win_count / (self.win_count + self.lose_count) * 100
-        self.avg_daily_profit_ratio = self.profit / self.duration
+        self.avg_daily_profit_ratio = self.profit / self.duration / initial_capital * 100
         self.avg_annual_profit_ratio = self.avg_daily_profit_ratio * 247
         self.avg_monthly_profit_ratio = self.avg_annual_profit_ratio / 12
 
@@ -50,9 +50,9 @@ class BacktestResult:
         print(f"실현 손실 횟수: {self.lose_count:,}")
         print(f"매매 성공률: {self.win_rate:.1f}%")
         print("--------------------")
-        print(f"일평균수익률: {self.avg_daily_profit_ratio:.1f}%")
-        print(f"월평균수익률: {self.avg_monthly_profit_ratio:.1f}%")
-        print(f"연평균수익률: {self.avg_annual_profit_ratio:.1f}%")
+        print(f"일평균수익률: {self.avg_daily_profit_ratio:.2f}%")
+        print(f"월평균수익률: {self.avg_monthly_profit_ratio:.2f}%")
+        print(f"연평균수익률: {self.avg_annual_profit_ratio:.2f}%")
 
     def get_start(self):
         return self.start

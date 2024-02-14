@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import mplfinance as mpf
 import strategy.secondary_indicator as si
-import dao.backtest_result as br
+import dao.ib_backtest_result as ibr
 
 class InfiniteBuy:
     
-    def __init__(self, stock, initial_capital = 10000, commission=0.007, divisions=40, standard_rsi = 0, is_quarter_mode = True, is_ma_cut = False, is_reinvest = True):
+    def __init__(self, stock, initial_capital = 10000, commission=0.007, divisions=40, standard_rsi=0, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True):
         self.stock = stock
         self.initial_capital = initial_capital # 초기자본
         self.commission = commission # 수수료
@@ -29,7 +29,8 @@ class InfiniteBuy:
         # RSI
         stock["Rsi"] = si.rsi(stock["Close"])
 
-        # MA 200
+        # MA
+        stock["MA20"] = si.moving_average(stock["Close"], window=20)
         stock["MA200"] = si.moving_average(stock["Close"], window=200)
 
         # MACD
@@ -48,8 +49,21 @@ class InfiniteBuy:
         drawdown = 0 
         max_drawdown = 0
 
+        # 현재 포지션
         position = None
+
+        # 매매 내역
         trade_history = []
+
+        # 쿼터손절 횟수
+        quarter_count = 0 
+
+        # 원금소진 횟수
+        exhaust_count = 0
+
+        # 이동평균 이탈 손절 횟수
+        ma_cut_count = 0
+
         
         for index, row in stock.iterrows():
 
@@ -58,7 +72,10 @@ class InfiniteBuy:
 
             if position is not None:  # 이미 포지션을 가지고 있는 경우
 
-                if (self.is_ma_cut and row["Close"] < row["MA200"]): # 종가가 200일선 아래라면 전체 손절
+                # if (self.is_ma_cut and row["Close"] < row["MA200"]): # 종가가 200일선 아래라면 전체 손절
+                if (self.is_ma_cut and row["MA20"] < row["MA200"]):
+                    ma_cut_count += 1
+
                 # if (self.is_ma_cut and row["Macd"] < row["MacdSignal"]):
                     amount = row["Close"] * position["Shares"]
                     sell_commission = math.floor(amount * self.commission * 100) / 100
@@ -98,6 +115,8 @@ class InfiniteBuy:
 
                     # 39 < T <= 40이라면 쿼터 손절
                     if self.is_quarter_mode and 39 < t and t <= 40:
+                        quarter_count += 1
+
                         # 1/4를 MOC(종가에 무조건 매도) 매도
                         amount = row["Close"] * target_shares1
                         sell_commission = math.floor(amount * self.commission * 100) / 100
@@ -118,6 +137,8 @@ class InfiniteBuy:
                             "EntryPrice": position["EntryPrice"],
                             "Profit": profit
                         })
+
+                        stock.at[index, "Quarter"] = position["EntryPrice"]
 
                     else:
                         if target_shares1 > 0 and row["Close"] > target_price1:
@@ -242,7 +263,8 @@ class InfiniteBuy:
 
             elif row["Rsi"] < self.standard_rsi and position is None and cash > 0: # 신규진입
 
-                if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
+                # if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
+                if (self.is_ma_cut and row["MA20"] > row["MA200"]) or not self.is_ma_cut: 
                 # if (self.is_ma_cut and row["Macd"] > row["MacdSignal"]) or not self.is_ma_cut: 
 
                     # 한번에 매수 가능한 현금
@@ -288,6 +310,12 @@ class InfiniteBuy:
             stock.at[index, "EntryShares"] = position["Shares"] if position is not None else np.nan
             stock.at[index, "ProgressPer"] = (position["TotalBuyPrice"] / position["AvailableBuyCash"] * 100) if position is not None else 0
 
+            
+            # 전날 100%가 아니고 당일 100%가 되면 원금소진 +1
+            if stock.at[index, "ProgressPer"] >= 100 and stock.at[stock.index[stock.index.get_loc(index)-1], "ProgressPer"] < 100:
+                exhaust_count += 1
+                stock.at[index, "Exhaust"] = position["EntryPrice"]
+
             # MDD
             if value > peek_value:
                 peek_value = value
@@ -302,7 +330,7 @@ class InfiniteBuy:
         trade_df = pd.DataFrame(trade_history)
 
         #백테스팅 결과
-        self.result = br.BacktestResult(
+        self.result = ibr.IbBacktestResult(
             start = stock.index[0],
             end = stock.index[-1],
             duration = len(stock),
@@ -315,6 +343,10 @@ class InfiniteBuy:
             win_count = len(trade_df[trade_df["Profit"] > 0]),
             lose_count = len(trade_df[trade_df["Profit"] <= 0]),
         )
+
+        self.result.set_quarter_count(quarter_count)
+        self.result.set_exhaust_count(exhaust_count)
+        self.result.set_ma_cut_count(ma_cut_count)
 
         return stock, trade_df
     
@@ -346,12 +378,17 @@ class InfiniteBuy:
             # mpf.make_addplot(self.stock["Macd"], type="line", color='darkorange', ylabel='MACD', panel=4),
             # mpf.make_addplot(self.stock["MacdSignal"], type="line", color='purple', ylabel='Signal', panel=4),
             # 자산가치
-            mpf.make_addplot(self.stock["Value"], type='line', ylabel='Value', color="red", panel=3),
+            mpf.make_addplot(self.stock["Value"], type='line', ylabel='Value', color='red', panel=3),
             mpf.make_addplot(self.stock["Drawdown"], type='line', ylabel='MDD', panel=3),
         ]
 
+        if "Quarter" in self.stock:
+            apds.append(mpf.make_addplot(self.stock["Quarter"], type='scatter', marker='v'))
+        if "Exhaust" in self.stock:
+            apds.append(mpf.make_addplot(self.stock["Exhaust"], type='scatter', marker='v'))
+
         # Plot the candlestick chart
-        mpf.plot(self.stock, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(200), volume=False, figscale=1.3, ) # panel_ratios=(5,1,1,2)
+        mpf.plot(self.stock, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 200), volume=False, figscale=1.3, ) # panel_ratios=(5,1,1,2)
     
     # 백테스팅 결과 가져오기
     def get_result(self):
