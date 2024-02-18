@@ -53,4 +53,3 @@ if __name__ == '__main__':
 
     # 무한매수
     infinite_buy()
-

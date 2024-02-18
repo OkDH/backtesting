@@ -1,39 +1,17 @@
 import pandas as pd
 import numpy as np
 import math
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import mplfinance as mpf
-import strategy.secondary_indicator as si
 import dao.ib_backtest_result as ibr
+import strategy.infinite_buy as ib
 
-class InfiniteBuy: # 무한매수 v2.2 버전
+'''
+ 무한매수 v1 버전
+ 기본 코드 틀은 strategy.infinite_buy.InfiniteBuy를 상속받아
+ becktest() 코드만 v1 버전으로 구현
+'''
+
+class InfiniteBuy(ib.InfiniteBuy): 
     
-    def __init__(self, stock, initial_capital = 10000, commission=0.007, divisions=40, standard_rsi=0, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True):
-        self.stock = stock
-        self.initial_capital = initial_capital # 초기자본
-        self.commission = commission # 수수료
-        self.standard_rsi = standard_rsi # 진입 기준 rsi (standard_rsi 높을 때 진입)
-        self.is_reinvest = is_reinvest # 수익금 재투자 여부(False이면 매수최대금이 원금을 넘지 않음) 
-        self.divisions = divisions
-        self.is_quarter_mode = is_quarter_mode # 쿼터 손절 여부
-        self.is_ma_cut = is_ma_cut # 200일선 커트 여부
-        self.result = None
-
-        self.generate_signals()
-
-    def generate_signals(self):
-        stock = self.stock
-
-        # RSI
-        stock["Rsi"] = si.rsi(stock["Close"])
-
-        # MA
-        stock["MA20"] = si.moving_average(stock["Close"], window=20)
-        stock["MA200"] = si.moving_average(stock["Close"], window=200)
-
-        # MACD
-        # stock["Macd"], stock["MacdSignal"] = si.macd(stock["Close"])
 
     def backtest(self):
 
@@ -356,39 +334,3 @@ class InfiniteBuy: # 무한매수 v2.2 버전
     def get_entry_price(self, entry_price, entry_shares, buy_price, buy_shares):
         new_entry_price = ((entry_price * entry_shares) + (buy_price * buy_shares)) / (entry_shares + buy_shares)
         return round(new_entry_price, 8)
-    
-    # 차트 그리기 함수
-    def plot_trades_candlestick(self):
-
-        standard_rsi_line = pd.Series(self.standard_rsi, index=self.stock.index)
-
-        apds = [ 
-            # 평단가 라인
-            mpf.make_addplot(self.stock["EntryPrice"], type='line'),
-            mpf.make_addplot(self.stock["EntryPrice"], type='line'),
-            mpf.make_addplot(self.stock["Start"], type='scatter'),
-            mpf.make_addplot(self.stock["End"], type='scatter'),
-            # 진행률
-            mpf.make_addplot(self.stock["ProgressPer"], ylabel='Persent', type='line', panel=1),
-            # RSI
-            mpf.make_addplot(self.stock["Rsi"], type="line", ylabel='RSI', panel=2),
-            mpf.make_addplot(standard_rsi_line, type="line", ylabel='RSI Line', panel=2),
-            # MACD
-            # mpf.make_addplot(self.stock["Macd"], type="line", color='darkorange', ylabel='MACD', panel=4),
-            # mpf.make_addplot(self.stock["MacdSignal"], type="line", color='purple', ylabel='Signal', panel=4),
-            # 자산가치
-            mpf.make_addplot(self.stock["Value"], type='line', ylabel='Value', color='red', panel=3),
-            mpf.make_addplot(self.stock["Drawdown"], type='line', ylabel='MDD', panel=3),
-        ]
-
-        if "Quarter" in self.stock:
-            apds.append(mpf.make_addplot(self.stock["Quarter"], type='scatter', marker='v'))
-        if "Exhaust" in self.stock:
-            apds.append(mpf.make_addplot(self.stock["Exhaust"], type='scatter', marker='v'))
-
-        # Plot the candlestick chart
-        mpf.plot(self.stock, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 200), volume=False, figscale=1.3, ) # panel_ratios=(5,1,1,2)
-    
-    # 백테스팅 결과 가져오기
-    def get_result(self):
-        return self.result
