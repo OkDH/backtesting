@@ -5,9 +5,9 @@ import dao.ib_backtest_result as ibr
 import strategy.infinite_buy as ib
 
 '''
- 무한매수 v1 버전
+ 무한매수 v2.2에 천천히 매수하는 버전
  기본 코드 틀은 strategy.infinite_buy.InfiniteBuy를 상속받아서
- becktest() 코드만 v1 버전으로 구현
+ becktest() 코드만 커스텀 매매 방식으로 구현함
 '''
 
 class InfiniteBuy(ib.InfiniteBuy): 

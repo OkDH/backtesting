@@ -1,13 +1,18 @@
 import yfinance as yf
 import strategy.short_term_leverage as strategy_stl
-import strategy.infinite_buy as strategy_ib
+import strategy.infinite_buy as ib_v2_2
+import strategy.infinite_buy_v1 as ib_v1
 import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("TQQQ", start="2016-06-01", end="2019-06-01")
+    stock = yf.download("TQQQ", start="2022-06-01")
 
-    ib = strategy_ib.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    # v2.2
+    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+
+    # v1
+    ib = ib_v1.InfiniteBuy(stock, initial_capital=10000, commission=0.007, standard_rsi=100, is_quarter_mode=False, is_ma_cut=True, is_reinvest=False)
 
     # 백테스팅
     data, trade_df = ib.backtest()

@@ -266,7 +266,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
                 if (self.is_ma_cut and row["MA20"] > row["MA200"]) or not self.is_ma_cut: 
                 # if (self.is_ma_cut and row["Macd"] > row["MacdSignal"]) or not self.is_ma_cut: 
 
-                    # 한번에 매수 가능한 현금
+                    # 한사이클에 매수 가능한 현금
                     if self.is_reinvest :
                         available_buy_cash = cash # 수익금 재투자
                     else :
@@ -365,9 +365,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
         apds = [ 
             # 평단가 라인
             mpf.make_addplot(self.stock["EntryPrice"], type='line'),
-            mpf.make_addplot(self.stock["EntryPrice"], type='line'),
             mpf.make_addplot(self.stock["Start"], type='scatter'),
-            mpf.make_addplot(self.stock["End"], type='scatter'),
             # 진행률
             mpf.make_addplot(self.stock["ProgressPer"], ylabel='Persent', type='line', panel=1),
             # RSI
@@ -381,6 +379,8 @@ class InfiniteBuy: # 무한매수 v2.2 버전
             mpf.make_addplot(self.stock["Drawdown"], type='line', ylabel='MDD', panel=3),
         ]
 
+        if "End" in self.stock:
+            apds.append(mpf.make_addplot(self.stock["End"], type='scatter'))
         if "Quarter" in self.stock:
             apds.append(mpf.make_addplot(self.stock["Quarter"], type='scatter', marker='v'))
         if "Exhaust" in self.stock:
