@@ -1,18 +1,23 @@
 import yfinance as yf
 import strategy.short_term_leverage as strategy_stl
-import strategy.infinite_buy as ib_v2_2
 import strategy.infinite_buy_v1 as ib_v1
+import strategy.infinite_buy as ib_v2_2
+import strategy.infinite_buy_slowly as ib_slowly
 import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("TQQQ", start="2022-06-01")
-
-    # v2.2
-    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    stock = yf.download("TQQQ", start="2015-06-01")
 
     # v1
     ib = ib_v1.InfiniteBuy(stock, initial_capital=10000, commission=0.007, standard_rsi=100, is_quarter_mode=False, is_ma_cut=True, is_reinvest=False)
+
+    # v2.2
+    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=True, is_reinvest=True)
+
+    # slowly
+    # ib = ib_slowly.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=True, is_reinvest=True)
+
 
     # 백테스팅
     data, trade_df = ib.backtest()
@@ -29,7 +34,7 @@ def infinite_buy():
     result.print()
 
     # 차트 출력
-    ib.plot_trades_candlestick()
+    # ib.plot_trades_candlestick()
 
 # 미국 레버리지 ETF 단타
 def short_term_leverage():

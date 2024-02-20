@@ -29,7 +29,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
         stock["Rsi"] = si.rsi(stock["Close"])
 
         # MA
-        stock["MA20"] = si.moving_average(stock["Close"], window=20)
+        stock["MA30"] = si.moving_average(stock["Close"], window=30)
         stock["MA200"] = si.moving_average(stock["Close"], window=200)
 
         # MACD
@@ -72,10 +72,9 @@ class InfiniteBuy: # 무한매수 v2.2 버전
             if position is not None:  # 이미 포지션을 가지고 있는 경우
 
                 # if (self.is_ma_cut and row["Close"] < row["MA200"]): # 종가가 200일선 아래라면 전체 손절
-                if (self.is_ma_cut and row["MA20"] < row["MA200"]):
+                if (self.is_ma_cut and row["MA30"] < row["MA200"]):
                     ma_cut_count += 1
 
-                # if (self.is_ma_cut and row["Macd"] < row["MacdSignal"]):
                     amount = row["Close"] * position["Shares"]
                     sell_commission = math.floor(amount * self.commission * 100) / 100
                     cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
@@ -263,8 +262,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
             elif row["Rsi"] < self.standard_rsi and position is None and cash > 0: # 신규진입
 
                 # if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
-                if (self.is_ma_cut and row["MA20"] > row["MA200"]) or not self.is_ma_cut: 
-                # if (self.is_ma_cut and row["Macd"] > row["MacdSignal"]) or not self.is_ma_cut: 
+                if (self.is_ma_cut and row["MA30"] > row["MA200"]) or not self.is_ma_cut: 
 
                     # 한사이클에 매수 가능한 현금
                     if self.is_reinvest :
@@ -387,7 +385,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
             apds.append(mpf.make_addplot(self.stock["Exhaust"], type='scatter', marker='v'))
 
         # Plot the candlestick chart
-        mpf.plot(self.stock, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(20, 200), volume=False, figscale=1.3, ) # panel_ratios=(5,1,1,2)
+        mpf.plot(self.stock, title="Back Testing", type='candle', style="yahoo", addplot=apds, mav=(30, 200), volume=False, figscale=1.3, ) # panel_ratios=(5,1,1,2)
     
     # 백테스팅 결과 가져오기
     def get_result(self):

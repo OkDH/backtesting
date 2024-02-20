@@ -50,7 +50,7 @@ class InfiniteBuy(ib.InfiniteBuy):
             if position is not None:  # 이미 포지션을 가지고 있는 경우
 
                 # if (self.is_ma_cut and row["Close"] < row["MA200"]): # 종가가 200일선 아래라면 전체 손절
-                if (self.is_ma_cut and row["MA20"] < row["MA200"]):
+                if (self.is_ma_cut and row["MA30"] < row["MA200"]):
                     ma_cut_count += 1
 
                 # if (self.is_ma_cut and row["Macd"] < row["MacdSignal"]):
@@ -187,8 +187,7 @@ class InfiniteBuy(ib.InfiniteBuy):
             elif row["Rsi"] < self.standard_rsi and position is None and cash > 0: # 신규진입
 
                 # if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
-                if (self.is_ma_cut and row["MA20"] > row["MA200"]) or not self.is_ma_cut: 
-                # if (self.is_ma_cut and row["Macd"] > row["MacdSignal"]) or not self.is_ma_cut: 
+                if (self.is_ma_cut and row["MA30"] > row["MA200"]) or not self.is_ma_cut: 
 
                     # 한 사이클에 매수 가능한 현금
                     if self.is_reinvest :
