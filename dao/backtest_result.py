@@ -68,6 +68,9 @@ class BacktestResult:
 
     def get_cash(self):
         return self.cash
+    
+    def get_balance_status(self):
+        return self.balance_status
 
     def get_max_drawdown(self):
         return self.max_drawdown

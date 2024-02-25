@@ -2,18 +2,6 @@ import dao.backtest_result as br
 
 class IbBacktestResult(br.BacktestResult):
 
-    # 쿼터손절 횟수
-    def set_quarter_count(self, quarter_count):
-        self.quarter_count = quarter_count
-    
-    # 원금소진 횟수
-    def set_exhaust_count(self, exhaust_count):
-        self.exhaust_count = exhaust_count
-
-    # 이동평균 이탈 손절 횟수
-    def set_ma_cut_count(self, ma_cut_count):
-        self.ma_cut_count = ma_cut_count
-
     def print(self):
         print("============ 백테스팅 결과 ============")
         print(f"시작일: {self.start}")
@@ -43,3 +31,24 @@ class IbBacktestResult(br.BacktestResult):
         print(f"일평균수익률: {self.avg_daily_profit_ratio:.2f}%")
         print(f"월평균수익률: {self.avg_monthly_profit_ratio:.2f}%")
         print(f"연평균수익률: {self.avg_annual_profit_ratio:.2f}%")
+
+    # 쿼터손절 횟수
+    def set_quarter_count(self, quarter_count):
+        self.quarter_count = quarter_count
+    
+    def get_quarter_count(self):
+        return self.quarter_count
+    
+    # 원금소진 횟수
+    def set_exhaust_count(self, exhaust_count):
+        self.exhaust_count = exhaust_count
+
+    def get_exhaust_count(self):
+        return self.exhaust_count
+
+    # 이동평균 이탈 손절 횟수
+    def set_ma_cut_count(self, ma_cut_count):
+        self.ma_cut_count = ma_cut_count
+    
+    def get_ma_cut_count(self):
+        return self.ma_cut_count

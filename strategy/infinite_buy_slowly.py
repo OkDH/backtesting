@@ -9,7 +9,7 @@ import strategy.infinite_buy as ib
  기본 코드 틀은 strategy.infinite_buy.InfiniteBuy를 상속받아서
  becktest() 코드만 커스텀 매매 방식으로 구현함
  * 하락한 날에만 매수(LOC 종가)
- * 30일선 위에서는 1회 매수금액의 절반만 매수
+ * 30일선 위에선 1/2만 매수
 '''
 
 class InfiniteBuy(ib.InfiniteBuy): 
