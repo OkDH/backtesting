@@ -38,13 +38,13 @@ def infinite_buy():
     # ib.plot_trades_candlestick()
 
 def infinite_all():
-    stock = yf.download("SOXL", start="2000-01-01")
+    stock = yf.download("DRN", start="2000-01-01")
 
     initial_capital = 100000
     commission=0.007
     is_quarter_mode = False
     is_ma_cut = False
-    is_reinvest = False
+    is_reinvest = True
 
     result_all_list = []
 
@@ -55,17 +55,17 @@ def infinite_all():
         # v1
         ib = ib_v1.InfiniteBuy(stock, initial_capital=initial_capital, commission=commission, standard_rsi=i, is_quarter_mode=is_quarter_mode, is_ma_cut=is_ma_cut, is_reinvest=is_reinvest)
         ib.backtest()
-        result_all_list.append(export_result(ib.get_result(), "v1", i))
+        result_all_list.append(export_result(ib.get_result(), "v1", i, is_quarter_mode, is_ma_cut))
 
         # v2.2
         ib = ib_v2_2.InfiniteBuy(stock, initial_capital=initial_capital, commission=commission, standard_rsi=i, is_quarter_mode=is_quarter_mode, is_ma_cut=is_ma_cut, is_reinvest=is_reinvest)
         ib.backtest()
-        result_all_list.append(export_result(ib.get_result(), "v2.2", i))
+        result_all_list.append(export_result(ib.get_result(), "v2.2", i, is_quarter_mode, is_ma_cut))
 
         # slowly
         ib = ib_slowly.InfiniteBuy(stock, initial_capital=initial_capital, commission=commission, standard_rsi=i, is_quarter_mode=is_quarter_mode, is_ma_cut=is_ma_cut, is_reinvest=is_reinvest)
         ib.backtest()
-        result_all_list.append(export_result(ib.get_result(), "slowly", i))
+        result_all_list.append(export_result(ib.get_result(), "slowly", i, is_quarter_mode, is_ma_cut))
     
     # 리스트를 데이터프레임으로 변환
     result_df = pd.DataFrame(result_all_list)
@@ -77,11 +77,13 @@ def infinite_all():
 
 
 # Result 결과 넣기
-def export_result(result, version, rsi):
+def export_result(result, version, rsi, is_quarter_mode, is_ma_cut):
 
     return {
         'version' : version,
         'rsi' : rsi,
+        'is_quarter_mode' : is_quarter_mode,
+        'is_ma_cut' : is_ma_cut,
         'start' : result.get_start(),
         'end' : result.get_end(),
         'duration' : result.get_duration(),
