@@ -38,12 +38,12 @@ def infinite_buy():
     # ib.plot_trades_candlestick()
 
 def infinite_all():
-    stock = yf.download("DRN", start="2000-01-01")
+    stock = yf.download("TECL", start="2010-2-11", end="2024-02-27")
 
     initial_capital = 100000
     commission=0.007
-    is_quarter_mode = False
-    is_ma_cut = False
+    is_quarter_mode = True
+    is_ma_cut = True
     is_reinvest = True
 
     result_all_list = []
