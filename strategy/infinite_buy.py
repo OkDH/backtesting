@@ -119,8 +119,8 @@ class InfiniteBuy: # 무한매수 v2.2 버전
                         amount = row["Close"] * target_shares1
                         sell_commission = math.floor(amount * self.commission * 100) / 100
                         cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                        position["Shares"] = shares - target_shares1
-                        position["TotalBuyPrice"] -= amount
+                        position["Shares"] -= target_shares1
+                        position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
 
                         # 손익금
                         profit = amount - (position["EntryPrice"] * target_shares1) - sell_commission
@@ -143,8 +143,8 @@ class InfiniteBuy: # 무한매수 v2.2 버전
                             amount = row["Close"] * target_shares1
                             sell_commission = math.floor(amount * self.commission * 100) / 100
                             cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                            position["Shares"] = shares - target_shares1
-                            position["TotalBuyPrice"] -= amount
+                            position["Shares"] -= target_shares1
+                            position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
 
                             # 손익금
                             profit = amount - (position["EntryPrice"] * target_shares1) - sell_commission
@@ -164,12 +164,12 @@ class InfiniteBuy: # 무한매수 v2.2 버전
                         target_price2 = position["EntryPrice"] * 1.1 # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
                         target_shares2 = shares - target_shares1
 
-                        if target_shares2 > 0 and row["Close"] > target_price2:
+                        if target_shares2 > 0 and row["High"] > target_price2:
                             amount = target_price2 * target_shares2
                             sell_commission = math.floor(amount * self.commission * 100) / 100
                             cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                            position["Shares"] = position["Shares"] - target_shares2
-                            position["TotalBuyPrice"] -= amount
+                            position["Shares"] -= target_shares2
+                            position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
 
                             # 손익금
                             profit = amount - (position["EntryPrice"] * target_shares2) - sell_commission

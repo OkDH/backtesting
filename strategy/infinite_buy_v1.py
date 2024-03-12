@@ -109,11 +109,11 @@ class InfiniteBuy(ib.InfiniteBuy):
                     else:
                         # 매도 체크 
 
-                        # 전체 수량을 평단가 +10%에 매도
+                        # 전체 수량을 평단가 +10%에 지정가 매도
                         target_price = position["EntryPrice"] * 1.1
                         target_shares = shares
-                        if shares > 0 and row["Close"] > target_price:
-                            amount = row["Close"] * target_shares
+                        if shares > 0 and row["High"] > target_price:
+                            amount = target_price * target_shares
                             sell_commission = math.floor(amount * self.commission * 100) / 100
                             cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
                             position["Shares"] = shares - target_shares
@@ -126,7 +126,7 @@ class InfiniteBuy(ib.InfiniteBuy):
                             # 매도 기록 추가
                             trade_history.append({
                                 "Type":"SELL",
-                                "Price": row["Close"],
+                                "Price": target_price,
                                 "Shares": target_shares,
                                 "Commission": sell_commission,
                                 "EntryPrice": position["EntryPrice"],
@@ -134,6 +134,9 @@ class InfiniteBuy(ib.InfiniteBuy):
                             })
 
                             stock.at[index, "End"] = target_price
+
+                            if self.is_reinvest :
+                                position["AvailableBuyCash"] = cash # 수익금 재투자
                         
                         
                         # 매수 체크
