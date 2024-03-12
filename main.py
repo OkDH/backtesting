@@ -7,17 +7,17 @@ import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("LABU", start="2015-06-01")
+    stock = yf.download("TECL", start="2000-01-01")
 
 
     # v1
-    # ib = ib_v1.InfiniteBuy(stock, initial_capital=10000, commission=0.007, standard_rsi=100, is_quarter_mode=False, is_ma_cut=True, is_reinvest=False)
+    ib = ib_v1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.2
     # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=True, is_reinvest=True)
 
     # slowly
-    ib = ib_slowly.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    # ib = ib_slowly.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
 
     # 백테스팅
@@ -35,10 +35,10 @@ def infinite_buy():
     result.print()
 
     # 차트 출력
-    # ib.plot_trades_candlestick()
+    ib.plot_trades_candlestick()
 
 def infinite_all():
-    stock = yf.download("LABU", start="2000-01-01")
+    stock = yf.download("TECL", start="2010-2-11", end="2024-02-27")
 
     initial_capital = 10000000
     commission=0.007
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     # short_term_leverage()
 
     # 무한매수
-    # infinite_buy()
+    infinite_buy()
 
     # 무한매수 여러 옵션들 비교 
-    infinite_all()
+    # infinite_all()
