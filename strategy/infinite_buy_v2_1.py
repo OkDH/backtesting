@@ -244,7 +244,7 @@ class InfiniteBuy(ib.InfiniteBuy):
                                     "Profit": profit
                                 })    
 
-                            stock.at[index, "End"] = target_price3
+                                stock.at[index, "End"] = target_price3
 
 
                         # 매수 체크

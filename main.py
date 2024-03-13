@@ -9,17 +9,17 @@ import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("SOXL", start="2000-02-11")
+    stock = yf.download("SSO", start="2010-02-11")
 
 
     # v1
-    # ib = ib_v1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    ib = ib_v1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2
     # ib = ib_v2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.1
-    ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=55, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    # ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.2
     # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=True, is_reinvest=True)
@@ -46,12 +46,12 @@ def infinite_buy():
     ib.plot_trades_candlestick()
 
 def infinite_all():
-    stock = yf.download("UPRO") # start="2010-02-11"
+    stock = yf.download("BITO") # start="2010-02-11"
 
     initial_capital = 10000000
     commission=0.007
-    is_quarter_mode = True
-    is_ma_cut = True
+    is_quarter_mode = False
+    is_ma_cut = False
     is_reinvest = True
 
     result_all_list = []
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     # short_term_leverage()
 
     # 무한매수
-    # infinite_buy()
+    infinite_buy()
 
     # 무한매수 여러 옵션들 비교 
-    infinite_all()
+    # infinite_all()//
