@@ -5,27 +5,31 @@ import strategy.infinite_buy_v2 as ib_v2
 import strategy.infinite_buy_v2_1 as ib_v2_1
 import strategy.infinite_buy as ib_v2_2
 import strategy.infinite_buy_slowly as ib_slowly
+import strategy.infinite_buy_switching as ib_switching
 import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("SSO", start="2010-02-11")
+    stock = yf.download("UPRO", start="2000-02-11")
 
 
     # v1
-    ib = ib_v1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    # ib = ib_v1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2
     # ib = ib_v2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.1
-    # ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=80, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.2
-    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=55, is_quarter_mode=True, is_ma_cut=True, is_reinvest=True)
+    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # slowly
     # ib = ib_slowly.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+
+    # switching
+    # ib = ib_switching.InfiniteBuy(stock, initial_capital=100000, divisions=40, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
 
     # 백테스팅

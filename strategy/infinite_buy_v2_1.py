@@ -195,7 +195,7 @@ class InfiniteBuy(ib.InfiniteBuy):
 
                             # 나머지 1/4를 평단가 +5%에 지정가 매도
                             target_price2 = position["EntryPrice"] * 1.05 # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
-                            target_shares2 = shares - target_shares1
+                            target_shares2 = target_shares1
 
                             if target_shares2 > 0 and row["High"] > target_price2:
                                 amount = target_price2 * target_shares2
