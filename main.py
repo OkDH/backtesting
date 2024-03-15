@@ -10,7 +10,7 @@ import pandas as pd
 
 # 무한매수 백테스팅
 def infinite_buy():
-    stock = yf.download("UPRO", start="2000-02-11")
+    stock = yf.download("TECL", start="2000-02-11")
 
 
     # v1
@@ -20,10 +20,10 @@ def infinite_buy():
     # ib = ib_v2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.1
-    ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=80, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    # ib = ib_v2_1.InfiniteBuy(stock, initial_capital=100000, commission=0.007, divisions=40, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # v2.2
-    # ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
+    ib = ib_v2_2.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=65, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
 
     # slowly
     # ib = ib_slowly.InfiniteBuy(stock, initial_capital=100000, commission=0.007, standard_rsi=100, is_quarter_mode=True, is_ma_cut=False, is_reinvest=True)
@@ -47,7 +47,7 @@ def infinite_buy():
     result.print()
 
     # 차트 출력
-    ib.plot_trades_candlestick()
+    # ib.plot_trades_candlestick()
 
 def infinite_all():
     stock = yf.download("BITO") # start="2010-02-11"

@@ -33,6 +33,9 @@ class InfiniteBuy(ib.InfiniteBuy):
         # 매매 내역
         trade_history = []
 
+        # 신규진입 횟수
+        new_count = 0
+
         # 쿼터손절 횟수
         quarter_count = 0 
 
@@ -109,7 +112,7 @@ class InfiniteBuy(ib.InfiniteBuy):
 
                     else:
 
-                        if row["Close"] > row["MA200"] : # 200일선 위라면 v1 방식
+                        if  row["Close"] > row["MA200"] : # 200일선 위라면 v1 방식
                             # 매도 체크 
                             # 전체 수량을 평단가 +10%에 지정가 매도
                             target_price = position["EntryPrice"] * 1.1
@@ -140,204 +143,111 @@ class InfiniteBuy(ib.InfiniteBuy):
                                 if self.is_reinvest :
                                     position["AvailableBuyCash"] = cash # 수익금 재투자
                             
-                            
-                            # 매수 체크
-                            if (position["AvailableBuyCash"] - position["TotalBuyPrice"]) > 0:
-                                one_buy_shares = math.floor(position["OneBuyCash"] / row["Close"])
-                                buy_shares1 = round(one_buy_shares / 2)
-
-                                # LOC 평단매수
-                                if row["Close"] < position["EntryPrice"]:
-                                    amount = row["Close"] * buy_shares1
-                                    buy_commission = math.floor(amount * self.commission * 100) / 100
-                                    cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
-                                    position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares1)
-                                    position["Shares"] += buy_shares1
-                                    position["TotalBuyPrice"] += amount
-                                    
-                                    # 매수 기록 추가
-                                    trade_history.append({
-                                        "Type":"BUY",
-                                        "Price": row["Close"],
-                                        "Shares": buy_shares1,
-                                        "Commission": buy_commission,
-                                        "EntryPrice": position["EntryPrice"]
-                                    })
-
-                                # 시중가 +10~15%인데, 전날 정가의 +10%로 LOC매수하는 것으로 구현
-                                buy_shares2 = one_buy_shares - buy_shares1
-                                buy_price = stock.at[stock.index[stock.index.get_loc(index)-1], "Close"] * 1.1
-                                
-                                if row["Close"] < buy_price:
-                                    amount = row["Close"] * buy_shares2
-                                    buy_commission = math.floor(amount * self.commission * 100) / 100
-                                    cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
-                                    position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares2)
-                                    position["Shares"] += buy_shares2
-                                    position["TotalBuyPrice"] += amount
-
-                                    # 매수 기록 추가
-                                    trade_history.append({
-                                        "Type":"BUY",
-                                        "Price": row["Close"],
-                                        "Shares": buy_shares2,
-                                        "Commission": buy_commission,
-                                        "EntryPrice": position["EntryPrice"]
-                                    })
                         else: # 200일선 아래라면 v2 버전
-                            per = (position["TotalBuyPrice"] / position["AvailableBuyCash"] * 100)
+                            # T : 매수 누적액 / 1회 매수 금액 (소수점 둘째자리 올림)
+                            t = position["TotalBuyPrice"] / position["OneBuyCash"]
+                            t = math.ceil(t * 100) / 100
 
-                            # 매도 체크 
-                            # 전반전이면
-                            if(per < 50):
-                                # 전체 수량을 평단가 +10%에 지정가 매도
-                                target_price = position["EntryPrice"] * 1.1
-                                target_shares = shares
-                                if shares > 0 and row["High"] > target_price:
-                                    amount = target_price * target_shares
-                                    sell_commission = math.floor(amount * self.commission * 100) / 100
-                                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                                    position["Shares"] -= target_shares
-                                    position["TotalBuyPrice"] = 0
+                            # 진행률 상관없이 
+                            # 수량의 1/4는 LOC (10 - T/2 * (40/분할수))%
+                            # 수량의 3/4는 +10% 매도
+                            shares = position["Shares"]
 
-                                    # 손익금
-                                    profit = amount - (position["EntryPrice"] * target_shares) - sell_commission
-                                    position["Profit"] += profit
+                            # 1/4 LOC 매도
+                            target_per1 = 10 - t/2 * (40/self.divisions)
+                            target_per1 = round(target_per1, 1)
+                            target_price1 = position["EntryPrice"] * (1 + (target_per1/100)) # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
+                            target_shares1 = math.floor(shares / 4)
 
-                                    # 매도 기록 추가
-                                    trade_history.append({
-                                        "Type":"SELL",
-                                        "Price": target_price,
-                                        "Shares": target_shares,
-                                        "Commission": sell_commission,
-                                        "EntryPrice": position["EntryPrice"],
-                                        "Profit": profit
-                                    })
+                            if target_shares1 > 0 and row["Close"] > target_price1:
+                                amount = row["Close"] * target_shares1
+                                sell_commission = math.floor(amount * self.commission * 100) / 100
+                                cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
+                                position["Shares"] -= target_shares1
+                                position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
 
-                                    stock.at[index, "End"] = target_price
-                            # 후반전이면
-                            else:
-                                # 1/2를 평단가 +5%에 지정가 매도
-                                target_price1 = position["EntryPrice"] * 1.05 # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
-                                target_shares1 = math.floor(shares / 2)
+                                # 손익금
+                                profit = amount - (position["EntryPrice"] * target_shares1) - sell_commission
+                                position["Profit"] += profit
 
-                                if target_shares1 > 0 and row["High"] > target_price1:
-                                    amount = target_price1 * target_shares1
-                                    sell_commission = math.floor(amount * self.commission * 100) / 100
-                                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                                    position["Shares"] -= target_shares1
-                                    position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
+                                # 매도 기록 추가
+                                trade_history.append({
+                                    "Type":"SELL",
+                                    "Price": row["Close"],
+                                    "Shares": target_shares1,
+                                    "Commission": sell_commission,
+                                    "EntryPrice": position["EntryPrice"],
+                                    "Profit": profit
+                                })
+                            
+                            # 3/4 지정가 매도
+                            target_price2 = position["EntryPrice"] * 1.1 # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
+                            target_shares2 = shares - target_shares1
 
-                                    # 손익금
-                                    profit = amount - (position["EntryPrice"] * target_shares1) - sell_commission
-                                    position["Profit"] += profit
+                            if target_shares2 > 0 and row["High"] > target_price2:
+                                amount = target_price2 * target_shares2
+                                sell_commission = math.floor(amount * self.commission * 100) / 100
+                                cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
+                                position["Shares"] -= target_shares2
+                                position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
 
-                                    # 매도 기록 추가
-                                    trade_history.append({
-                                        "Type":"SELL",
-                                        "Price": target_price1,
-                                        "Shares": target_shares1,
-                                        "Commission": sell_commission,
-                                        "EntryPrice": position["EntryPrice"],
-                                        "Profit": profit
-                                    })
+                                # 손익금
+                                profit = amount - (position["EntryPrice"] * target_shares2) - sell_commission
+                                position["Profit"] +=profit
 
-                                # 나머지 1/2를 평단가 +10%에 지정가 매도
-                                target_price2 = position["EntryPrice"] * 1.1 # + 수수료 고려하여 위에서 팔 경우 코딩 수정 필요
-                                target_shares2 = shares - target_shares1
+                                # 매도 기록 추가
+                                trade_history.append({
+                                    "Type":"SELL",
+                                    "Price": target_price2,
+                                    "Shares": target_shares2,
+                                    "Commission": sell_commission,
+                                    "EntryPrice": position["EntryPrice"],
+                                    "Profit": profit
+                                })
 
-                                if target_shares2 > 0 and row["High"] > target_price2:
-                                    amount = target_price2 * target_shares2
-                                    sell_commission = math.floor(amount * self.commission * 100) / 100
-                                    cash += amount - sell_commission  # 주식 판매로 얻은 금액 추가
-                                    position["Shares"] -= target_shares2
-                                    position["TotalBuyPrice"] = position["EntryPrice"] * position["Shares"]
+                        # 매수 체크
+                        if (position["AvailableBuyCash"] - position["TotalBuyPrice"]) > 0:
+                            one_buy_shares = math.floor(position["OneBuyCash"] / row["Close"])
+                            buy_shares1 = round(one_buy_shares / 2)
 
-                                    # 손익금
-                                    profit = amount - (position["EntryPrice"] * target_shares2) - sell_commission
-                                    position["Profit"] += profit
+                            # LOC 평단매수
+                            if row["Close"] < position["EntryPrice"]:
+                                amount = row["Close"] * buy_shares1
+                                buy_commission = math.floor(amount * self.commission * 100) / 100
+                                cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
+                                position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares1)
+                                position["Shares"] += buy_shares1
+                                position["TotalBuyPrice"] += amount
+                                
+                                # 매수 기록 추가
+                                trade_history.append({
+                                    "Type":"BUY",
+                                    "Price": row["Close"],
+                                    "Shares": buy_shares1,
+                                    "Commission": buy_commission,
+                                    "EntryPrice": position["EntryPrice"]
+                                })
 
-                                    # 매도 기록 추가
-                                    trade_history.append({
-                                        "Type":"SELL",
-                                        "Price": target_price2,
-                                        "Shares": target_shares2,
-                                        "Commission": sell_commission,
-                                        "EntryPrice": position["EntryPrice"],
-                                        "Profit": profit
-                                    })
+                            # 시중가 +10~15%인데, 전날 정가의 +10%로 LOC매수하는 것으로 구현
+                            buy_shares2 = one_buy_shares - buy_shares1
+                            buy_price = stock.at[stock.index[stock.index.get_loc(index)-1], "Close"] * 1.1
+                            
+                            if row["Close"] < buy_price:
+                                amount = row["Close"] * buy_shares2
+                                buy_commission = math.floor(amount * self.commission * 100) / 100
+                                cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
+                                position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares2)
+                                position["Shares"] += buy_shares2
+                                position["TotalBuyPrice"] += amount
 
-                                    stock.at[index, "End"] = target_price2
-
-
-                            # 매수 체크
-                            if (position["AvailableBuyCash"] - position["TotalBuyPrice"]) > 0:
-
-                                # 전반전이면
-                                if(per < 50):
-                                    one_buy_shares = math.floor(position["OneBuyCash"] / row["Close"])
-                                    buy_shares1 = round(one_buy_shares / 2)
-
-                                    # LOC 평단매수
-                                    if row["Close"] < position["EntryPrice"]:
-                                        amount = row["Close"] * buy_shares1
-                                        buy_commission = math.floor(amount * self.commission * 100) / 100
-                                        cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
-                                        position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares1)
-                                        position["Shares"] += buy_shares1
-                                        position["TotalBuyPrice"] += amount
-                                        
-                                        # 매수 기록 추가
-                                        trade_history.append({
-                                            "Type":"BUY",
-                                            "Price": row["Close"],
-                                            "Shares": buy_shares1,
-                                            "Commission": buy_commission,
-                                            "EntryPrice": position["EntryPrice"]
-                                        })
-
-                                    # 평단 +5% LOC매수
-                                    buy_shares2 = one_buy_shares - buy_shares1
-                                    buy_price = position["EntryPrice"] * 1.05
-                                    
-                                    if row["Close"] < buy_price:
-                                        amount = row["Close"] * buy_shares2
-                                        buy_commission = math.floor(amount * self.commission * 100) / 100
-                                        cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
-                                        position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], buy_shares2)
-                                        position["Shares"] += buy_shares2
-                                        position["TotalBuyPrice"] += amount
-
-                                        # 매수 기록 추가
-                                        trade_history.append({
-                                            "Type":"BUY",
-                                            "Price": row["Close"],
-                                            "Shares": buy_shares2,
-                                            "Commission": buy_commission,
-                                            "EntryPrice": position["EntryPrice"]
-                                        })
-                                # 후반전이면
-                                else: 
-                                    one_buy_shares = math.floor(position["OneBuyCash"] / row["Close"])
-
-                                    # LOC 평단매수
-                                    if row["Close"] < position["EntryPrice"]:
-                                        amount = row["Close"] * one_buy_shares
-                                        buy_commission = math.floor(amount * self.commission * 100) / 100
-                                        cash -= amount + buy_commission # 주식 구입으로 사용된 금액 차감
-                                        position["EntryPrice"] = self.get_entry_price(position["EntryPrice"], position["Shares"], row["Close"], one_buy_shares)
-                                        position["Shares"] += one_buy_shares
-                                        position["TotalBuyPrice"] += amount
-                                        
-                                        # 매수 기록 추가
-                                        trade_history.append({
-                                            "Type":"BUY",
-                                            "Price": row["Close"],
-                                            "Shares": one_buy_shares,
-                                            "Commission": buy_commission,
-                                            "EntryPrice": position["EntryPrice"]
-                                        })
-
+                                # 매수 기록 추가
+                                trade_history.append({
+                                    "Type":"BUY",
+                                    "Price": row["Close"],
+                                    "Shares": buy_shares2,
+                                    "Commission": buy_commission,
+                                    "EntryPrice": position["EntryPrice"]
+                                })
 
                     if position["Shares"] == 0:
                         stock.at[index, "End"] = row["Close"]
@@ -347,6 +257,8 @@ class InfiniteBuy(ib.InfiniteBuy):
 
                 # if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
                 if (self.is_ma_cut and row["MA30"] > row["MA200"]) or not self.is_ma_cut: 
+
+                    new_count += 1
 
                     # 한 사이클에 매수 가능한 현금
                     if self.is_reinvest :
@@ -425,6 +337,7 @@ class InfiniteBuy(ib.InfiniteBuy):
             lose_count = len(trade_df[trade_df["Profit"] <= 0]),
         )
 
+        self.result.set_new_count(new_count)
         self.result.set_quarter_count(quarter_count)
         self.result.set_exhaust_count(exhaust_count)
         self.result.set_ma_cut_count(ma_cut_count)

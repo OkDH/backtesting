@@ -24,6 +24,7 @@ class IbBacktestResult(br.BacktestResult):
         print(f"실현 손실 횟수: {self.lose_count:,}")
         print(f"매매 성공률: {self.win_rate:.1f}%")
         print("--------------------")
+        print(f"신규진입 횟수: {self.new_count}")
         print(f"원금소진 횟수: {self.exhaust_count}")
         print(f"쿼터손절 횟수: {self.quarter_count}")
         print(f"이평선 이탈손절 횟수: {self.ma_cut_count}")
@@ -31,6 +32,13 @@ class IbBacktestResult(br.BacktestResult):
         print(f"일평균수익률: {self.avg_daily_profit_ratio:.2f}%")
         print(f"월평균수익률: {self.avg_monthly_profit_ratio:.2f}%")
         print(f"연평균수익률: {self.avg_annual_profit_ratio:.2f}%")
+
+    # 신규진입 횟수
+    def set_new_count(self, new_count):
+        self.new_count = new_count
+    
+    def get_new_count(self):
+        return self.new_count
 
     # 쿼터손절 횟수
     def set_quarter_count(self, quarter_count):
@@ -52,3 +60,4 @@ class IbBacktestResult(br.BacktestResult):
     
     def get_ma_cut_count(self):
         return self.ma_cut_count
+    

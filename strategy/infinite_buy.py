@@ -29,6 +29,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
         stock["Rsi"] = si.rsi(stock["Close"])
 
         # MA
+        stock["MA20"] = si.moving_average(stock["Close"], window=20)
         stock["MA30"] = si.moving_average(stock["Close"], window=30)
         stock["MA200"] = si.moving_average(stock["Close"], window=200)
 
@@ -53,6 +54,9 @@ class InfiniteBuy: # 무한매수 v2.2 버전
 
         # 매매 내역
         trade_history = []
+        
+        # 신규진입 횟수
+        new_count = 0
 
         # 쿼터손절 횟수
         quarter_count = 0 
@@ -264,6 +268,8 @@ class InfiniteBuy: # 무한매수 v2.2 버전
                 # if (self.is_ma_cut and row["Close"] > row["MA200"]) or not self.is_ma_cut: 
                 if (self.is_ma_cut and row["MA30"] > row["MA200"]) or not self.is_ma_cut: 
 
+                    new_count += 1
+
                     # 한사이클에 매수 가능한 현금
                     if self.is_reinvest :
                         available_buy_cash = cash # 수익금 재투자
@@ -341,6 +347,7 @@ class InfiniteBuy: # 무한매수 v2.2 버전
             lose_count = len(trade_df[trade_df["Profit"] <= 0]),
         )
 
+        self.result.set_new_count(new_count)
         self.result.set_quarter_count(quarter_count)
         self.result.set_exhaust_count(exhaust_count)
         self.result.set_ma_cut_count(ma_cut_count)
